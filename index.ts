@@ -44,7 +44,7 @@ const grantAllowanceExample = async () => {
     Buffer.from("ipfs://bafkreidv7k5vfn6gnj5mhahnrvhxep4okw75dwbt6o4r3rhe3ktraddf5a"),
 ];
   // create token collection and print initial supply
-  const txnResponse = await createNewNftCollection(client, 'HBAR RULES', 'HRULES', metadataIPFSUrls, treasuryAccId, treasuryAccPvKey)
+  const txnResponse = await createNewNftCollection(client, 'HBAR RULES', 'HRULES', metadataIPFSUrls, treasuryAccId, treasuryAccPvKey);
   const tokenIdInSolidityFormat = txnResponse.tokenId.toSolidityAddress();
 
   const tokenInfo = await tokenInfoQuery(txnResponse.tokenId, client);
@@ -68,9 +68,9 @@ const grantAllowanceExample = async () => {
 
   /*
    * Setting the necessary paramters to execute the approve contract function
-   * tokenIdInSolidityFormat is the solidity address of the token we are granting an approval for
+   * tokenIdInSolidityFormat is the solidity address of the token we are granting approval for
    * aliceAccId is the solidity address of the spender
-   * serialNum is the serial number of the NFT we allow alice to spend on behalf of the treasury account
+   * serialNum is the serial number of the NFT we allow Alice to spend on behalf of the treasury account
   */
   for(let serialNum=1; serialNum < 6; serialNum++) {
     const approveParams = new ContractFunctionParameters()
@@ -114,6 +114,24 @@ const grantAllowanceExample = async () => {
   await checkAccountBalance(treasuryAccId, txnResponse.tokenId, client);
   await checkAccountBalance(bobAccId, txnResponse.tokenId, client);
 
+  // set operator to be treasury account (treasury account is now the caller of the smart contract)
+  // client.setOperator(treasuryAccId, treasuryAccPvKey);
+
+  // remove NFT allowance
+  // for(let serialNum=1; serialNum < 6; serialNum++) {
+  //   const approveParams = new ContractFunctionParameters()
+  //     .addAddress('0x0000000000000000000000000000000000000000')
+  //     .addAddress(aliceAccId.toSolidityAddress())
+  //     .addUint256(serialNum);
+  
+  //   await executeContractFunction(
+  //     client,
+  //     contractId,
+  //     4_000_000,
+  //     'approve',
+  //     approveParams,
+  //     treasuryAccPvKey);
+  // }
   client.close();
 }
 grantAllowanceExample();

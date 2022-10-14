@@ -148,15 +148,15 @@ const grantAllowanceExample = async () => {
   // make alice the client to execute the contract call.
   client.setOperator(aliceAccId, aliceAccPvKey);
   // alice tranfers the NFTs with serial #1, serial #3, and serial #5 to Bob
-  const nFTsToTransfer = [1, 3, 5];
+  const nftsToTransfer = [3, 5];
   console.log(`------- Start transfer of ownership for NFTs ------\n`)
-  for (let i = 0; i < nFTsToTransfer.length; i++) {
-    // Setting the necessary paramters to execute the approve contract function
+  for (let i = 0; i < nftsToTransfer.length; i++) {
+    // Setting the necessary parameters to execute the approve contract function
     const transferFromParams = new ContractFunctionParameters()
     .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
     .addAddress(treasuryAccId.toSolidityAddress())
     .addAddress(bobAccId.toSolidityAddress())
-    .addUint256(nFTsToTransfer[i]);
+    .addUint256(nftsToTransfer[i]);
 
     await executeContractFunction(
       client,
@@ -176,14 +176,14 @@ const grantAllowanceExample = async () => {
   /*
     * Remove NFT approval 
   */
-  const nFTsToRemoveApproval = [1, 3, 5];
+  const nftsToRemoveApproval = [1];
   console.log(`------- Start removal of approval for NFTs -------\n`);
-  for (let i = 0; i < nFTsToRemoveApproval.length; i++) {
+  for (let i = 0; i < nftsToRemoveApproval.length; i++) {
     // Setting the necessary paramters to execute the approve contract function
     const approveParams = new ContractFunctionParameters()
     .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
     .addAddress('0x0000000000000000000000000000000000000000')
-    .addUint256(nFTsToRemoveApproval[i]);
+    .addUint256(nftsToRemoveApproval[i]);
 
     await executeContractFunction(
       client,
@@ -195,7 +195,7 @@ const grantAllowanceExample = async () => {
   }
 
   /*
-   *  get the approved addres for each NFT in collection
+   *  get the approved address for each NFT in the collection
    *  returns the approved address or the zero address if there is none
   */
   let contractFunctionResult = [];
@@ -205,13 +205,13 @@ const grantAllowanceExample = async () => {
       .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
       .addUint256(serialNum);
   
-      contractFunctionResult.push(await executeContractFunction(
-      client,
-      contractId,
-      4_000_000,
-      'getApprovedBySerialNumber',
-      getApprovedParams,
-      treasuryAccPvKey));
+    contractFunctionResult.push(await executeContractFunction(
+    client,
+    contractId,
+    4_000_000,
+    'getApprovedBySerialNumber',
+    getApprovedParams,
+    treasuryAccPvKey));
   }
 
   if (contractFunctionResult) {

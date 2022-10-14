@@ -43,8 +43,8 @@ export const executeContractFunction = async (client: Client, contractId: string
 		.setIncludeChildren(true)
 		.execute(client);
 
-	console.log(
-		`\n- Contract call for FT ${functionName} (check in Hashscan) was a: ${recQuery.receipt.status.toString()} transaction id: ${recQuery.transactionId}`
-	);
+	// console.log(
+	// 	`- Contract call for NFT ${functionName} was a: ${recQuery.receipt.status.toString()};`
+	// );
     return txRecord.contractFunctionResult;
 }

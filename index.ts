@@ -1,4 +1,4 @@
-import { Client, AccountId, PrivateKey, Hbar, ContractFunctionParameters } from "@hashgraph/sdk";
+import { Client, AccountId, PrivateKey, Hbar, ContractFunctionParameters, ContractFunctionResult } from "@hashgraph/sdk";
 import * as dotenv from 'dotenv';
 dotenv.config()
 const fs = require("fs");
@@ -26,12 +26,13 @@ client.setDefaultMaxTransactionFee(new Hbar(100));
 */
 const grantAllowanceExample = async () => {
   // create treasury's, alice's, and bob's accounts
-  const [treasuryAccId, treasuryAccPvKey] = await createAccount(client, 50);
+  const [treasuryAccId, treasuryAccPvKey] = await createAccount(client, 100);
   console.log(`- Treasury's account: https://hashscan.io/#/testnet/account/${treasuryAccId}`);
   console.log(`- Treasury's private key: ${treasuryAccPvKey}`);
-  const [aliceAccId, aliceAccPvKey] = await createAccount(client, 50);
+  const [aliceAccId, aliceAccPvKey] = await createAccount(client, 100);
   console.log(`- Alice's account: https://hashscan.io/#/testnet/account/${aliceAccId}`);
-  const [bobAccId, bobAccPvKey] = await createAccount(client, 50);
+
+  const [bobAccId, bobAccPvKey] = await createAccount(client, 100);
   console.log(`- Bob's account: https://hashscan.io/#/testnet/account/${bobAccId}`);
   console.log(`- Bob's private key: ${bobAccPvKey}\n`);
 
@@ -45,10 +46,14 @@ const grantAllowanceExample = async () => {
 ];
   // create token collection and print initial supply
   const txnResponse = await createNewNftCollection(client, 'HBAR RULES', 'HRULES', metadataIPFSUrls, treasuryAccId, treasuryAccPvKey);
-  const tokenIdInSolidityFormat = txnResponse.tokenId.toSolidityAddress();
-
   const tokenInfo = await tokenInfoQuery(txnResponse.tokenId, client);
   console.log(`Initial token supply: ${tokenInfo.totalSupply.low}\n`);
+
+  const TOKEN_ID_IN_SOLIDITY_FORMAT = txnResponse.tokenId.toSolidityAddress();
+  console.log(`Token Id in solidity format: ${TOKEN_ID_IN_SOLIDITY_FORMAT}`);
+  const ALICE_ACCOUNT_IN_SOLIDITY_FORMAT = aliceAccId.toSolidityAddress();
+  console.log(`Alice, the spender, address in solidity format: ${ALICE_ACCOUNT_IN_SOLIDITY_FORMAT}`);
+
 
   // Bob must associate to recieve token
   await associateToken(client, txnResponse.tokenId, bobAccId, bobAccPvKey)
@@ -63,21 +68,19 @@ const grantAllowanceExample = async () => {
   const gasLimit = 1000000;
   const [contractId, contractSolidityAddress] = await deployContract(client, bytecode, gasLimit);
 
-  // set oeprator to be treasury account (treasury account is now the caller of smart contract)
+  // set operator to be treasury account (treasury account is now the caller of the smart contract)
   client.setOperator(treasuryAccId, treasuryAccPvKey);
 
-  /*
-   * Setting the necessary paramters to execute the approve contract function
-   * tokenIdInSolidityFormat is the solidity address of the token we are granting approval for
-   * aliceAccId is the solidity address of the spender
-   * serialNum is the serial number of the NFT we allow Alice to spend on behalf of the treasury account
-  */
-  for(let serialNum=1; serialNum < 6; serialNum++) {
+  // NFTs with serial #1, #3, and #5 to approve
+  const nFTsToApprove = [1, 3, 5];
+  console.log(`------- Start approval of NFTs ------\n`);
+  for (let i = 0; i < nFTsToApprove.length; i++) {
+    // Setting the necessary parameters to execute the approve contract function
     const approveParams = new ContractFunctionParameters()
-      .addAddress(tokenIdInSolidityFormat)
-      .addAddress(aliceAccId.toSolidityAddress())
-      .addUint256(serialNum);
-  
+    .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
+    .addAddress(ALICE_ACCOUNT_IN_SOLIDITY_FORMAT)
+    .addUint256(nFTsToApprove[i]);
+
     await executeContractFunction(
       client,
       contractId,
@@ -87,51 +90,136 @@ const grantAllowanceExample = async () => {
       treasuryAccPvKey);
   }
 
+  /*
+   *  TODO: uncomment if you want to approve all of msg.sender assets 
+   */
+  // const isApproveAll = true;
+  // const setApprovalForAllParams = new ContractFunctionParameters()
+  //   .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
+  //   .addAddress(ALICE_ACCOUNT_IN_SOLIDITY_FORMAT)
+  //   .addBool(isApproveAll)
+
+
+  // Get the account, in solidity format, approved for token with serial number 3
+  // const getApprovedParams = new ContractFunctionParameters()
+  // .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
+  // .addUint256(3);
+
+  // const contractFunctionResult = await executeContractFunction(
+  //     client,
+  //     contractId,
+  //     4_000_000,
+  //     'getApprovedBySerialNumber',
+  //     getApprovedParams,
+  //     treasuryAccPvKey);
+
+  
+  /*
+   *  get the approved address for each NFT in collection
+   *  returns the approved address or the zero address if there is none
+  */
+  let contractFunctionRes = [];
+  console.log(` - Get approved address for each NFT in collection ${txnResponse.tokenId}`)
+  for(let serialNum=1; serialNum < 6; serialNum++) {
+    const getApprovedParams = new ContractFunctionParameters()
+      .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
+      .addUint256(serialNum);
+  
+      contractFunctionRes.push(await executeContractFunction(
+      client,
+      contractId,
+      4_000_000,
+      'getApprovedBySerialNumber',
+      getApprovedParams,
+      treasuryAccPvKey));
+  }
+
+  if (contractFunctionRes) {
+    contractFunctionRes.forEach((result) => {
+        console.log(`\n- Approved Address: ${result?.getAddress()}`);
+    })
+  }
+
   // set the client back to the operator account
   client.setOperator(operatorAccountId, operatorPrivateKey);
   await checkAccountBalance(treasuryAccId, txnResponse.tokenId, client);
   await checkAccountBalance(bobAccId, txnResponse.tokenId, client);
 
-  // make alice the client to excute the contract call.
+  // make alice the client to execute the contract call.
   client.setOperator(aliceAccId, aliceAccPvKey);
-  // alice tranfers the NFTs with serial #1, serial #2, and serial #3 to Bob
-  for(let serialNum=1; serialNum < 4; serialNum++) {
+  // alice tranfers the NFTs with serial #1, serial #3, and serial #5 to Bob
+  const nFTsToTransfer = [1, 3, 5];
+  console.log(`------- Start transfer of ownership for NFTs ------\n`)
+  for (let i = 0; i < nFTsToTransfer.length; i++) {
+    // Setting the necessary paramters to execute the approve contract function
     const transferFromParams = new ContractFunctionParameters()
-    .addAddress(tokenIdInSolidityFormat)
+    .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
     .addAddress(treasuryAccId.toSolidityAddress())
     .addAddress(bobAccId.toSolidityAddress())
-    .addUint256(serialNum);
-  
+    .addUint256(nFTsToTransfer[i]);
+
     await executeContractFunction(
       client,
       contractId,
       4_000_000,
       'transferFrom',
       transferFromParams,
-      aliceAccPvKey);
+      treasuryAccPvKey);
   }
 
   await checkAccountBalance(treasuryAccId, txnResponse.tokenId, client);
   await checkAccountBalance(bobAccId, txnResponse.tokenId, client);
 
   // set operator to be treasury account (treasury account is now the caller of the smart contract)
-  // client.setOperator(treasuryAccId, treasuryAccPvKey);
+  client.setOperator(treasuryAccId, treasuryAccPvKey);
 
-  // remove NFT allowance
-  // for(let serialNum=1; serialNum < 6; serialNum++) {
-  //   const approveParams = new ContractFunctionParameters()
-  //     .addAddress('0x0000000000000000000000000000000000000000')
-  //     .addAddress(aliceAccId.toSolidityAddress())
-  //     .addUint256(serialNum);
+  /*
+    * Remove NFT approval 
+  */
+  const nFTsToRemoveApproval = [1, 3, 5];
+  console.log(`------- Start removal of approval for NFTs -------\n`);
+  for (let i = 0; i < nFTsToRemoveApproval.length; i++) {
+    // Setting the necessary paramters to execute the approve contract function
+    const approveParams = new ContractFunctionParameters()
+    .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
+    .addAddress('0x0000000000000000000000000000000000000000')
+    .addUint256(nFTsToRemoveApproval[i]);
+
+    await executeContractFunction(
+      client,
+      contractId,
+      4_000_000,
+      'approve',
+      approveParams,
+      treasuryAccPvKey);
+  }
+
+  /*
+   *  get the approved addres for each NFT in collection
+   *  returns the approved address or the zero address if there is none
+  */
+  let contractFunctionResult = [];
+  console.log(` - Get approved address for each NFT in collection ${txnResponse.tokenId} (should all be zero address)`)
+  for(let serialNum=1; serialNum < 6; serialNum++) {
+    const getApprovedParams = new ContractFunctionParameters()
+      .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
+      .addUint256(serialNum);
   
-  //   await executeContractFunction(
-  //     client,
-  //     contractId,
-  //     4_000_000,
-  //     'approve',
-  //     approveParams,
-  //     treasuryAccPvKey);
-  // }
+      contractFunctionResult.push(await executeContractFunction(
+      client,
+      contractId,
+      4_000_000,
+      'getApprovedBySerialNumber',
+      getApprovedParams,
+      treasuryAccPvKey));
+  }
+
+  if (contractFunctionResult) {
+    contractFunctionResult.forEach((result) => {
+        console.log(`\n- Approved Address: ${result?.getAddress()}`);
+    })
+  }
+
   client.close();
 }
 grantAllowanceExample();

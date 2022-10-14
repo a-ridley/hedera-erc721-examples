@@ -37,7 +37,6 @@ export const createNonFungibleToken = async (
   console.log(
     `Token Type Creation was a ${txnStatus} and was created with token id: ${tokenId}`
   );
-  console.log(`Token Id in Solidity format: ${tokenIdInSolidityFormat}`);
 
   return [tokenId, tokenIdInSolidityFormat];
 };

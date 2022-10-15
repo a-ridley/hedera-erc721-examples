@@ -99,12 +99,6 @@ const grantAllowanceExample = async () => {
   //   .addAddress(ALICE_ACCOUNT_IN_SOLIDITY_FORMAT)
   //   .addBool(isApproveAll)
 
-
-  // Get the account, in solidity format, approved for token with serial number 3
-  // const getApprovedParams = new ContractFunctionParameters()
-  // .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
-  // .addUint256(3);
-
   // const contractFunctionResult = await executeContractFunction(
   //     client,
   //     contractId,

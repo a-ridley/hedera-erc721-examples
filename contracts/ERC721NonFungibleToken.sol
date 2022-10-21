@@ -27,6 +27,30 @@ contract ERC721NonFungibleToken {
     return IERC721(token).getApproved(tokenId);
   }
 
+  /// @notice Check if the spender address is allowed as an operator for the owner address
+  /// @param owner account of the tokens
+  /// @param spender the address that can spend tokens on behalf of the owner
+  /// @return result True if spender is an approved operator for owner or false
+  function isApprovedForAll(address token, address owner, address spender) external view returns (bool result) {
+    return IERC721(token).isApprovedForAll(owner, spender);
+  }
+
+  /// @notice approve all of msg.sender assets to be operated by spender
+  /// @param token address of token to approve
+  /// @param spender the account allowed to operate on all of the owner tokens
+  /// @param approved a boolean to determine whether to approve or remove approval
+  /// @return result success if approval was successful
+  function setApprovalForAll(address token, address spender, bool approved) internal returns (bool result) {
+    (bool success, ) = token.delegatecall(
+      abi.encodeWithSelector(
+        IERC721.setApprovalForAll.selector,
+        spender,
+        approved
+      )
+    );
+    return success;
+  }
+
   /// @notice Transfer NFT to a different owner
   /// @param token address of token to transfer
   /// @param sender is the address from where the NFT is being transferred from

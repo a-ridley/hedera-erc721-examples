@@ -1,8 +1,8 @@
-import { Client, AccountId, PrivateKey, Hbar, ContractFunctionParameters, ContractFunctionResult } from "@hashgraph/sdk";
+import { Client, AccountId, PrivateKey, Hbar, ContractFunctionParameters } from "@hashgraph/sdk";
 import * as dotenv from 'dotenv';
 dotenv.config()
 const fs = require("fs");
-import { createNonFungibleToken, associateToken, createNewNftCollection } from "./services/hederaTokenService";
+import { associateToken, createNewNftCollection } from "./services/hederaTokenService";
 import { createAccount } from "./services/hederaAccountService";
 import { tokenInfoQuery, checkAccountBalance, checkContractBalance } from "./services/queries";
 import { deployContract, executeContractFunction } from "./services/hederaSmartContractService";
@@ -54,7 +54,6 @@ const grantAllowanceExample = async () => {
   const ALICE_ACCOUNT_IN_SOLIDITY_FORMAT = aliceAccId.toSolidityAddress();
   console.log(`Alice, the spender, address in solidity format: ${ALICE_ACCOUNT_IN_SOLIDITY_FORMAT}`);
 
-
   // Bob must associate to recieve token
   await associateToken(client, txnResponse.tokenId, bobAccId, bobAccPvKey)
 
@@ -91,21 +90,37 @@ const grantAllowanceExample = async () => {
   }
 
   /*
-   *  TODO: uncomment if you want to approve all of msg.sender assets 
+   *  TODO: uncomment if you want to approve all of msg.sender assets
+   * note: contract has to allow for multiple operators per owner
    */
   // const isApproveAll = true;
   // const setApprovalForAllParams = new ContractFunctionParameters()
   //   .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
   //   .addAddress(ALICE_ACCOUNT_IN_SOLIDITY_FORMAT)
-  //   .addBool(isApproveAll)
+  //   .addBool(true)
 
-  // const contractFunctionResult = await executeContractFunction(
+  // const setApprovalForAllContractResult = await executeContractFunction(
   //     client,
   //     contractId,
   //     4_000_000,
-  //     'getApprovedBySerialNumber',
-  //     getApprovedParams,
+  //     'setApprovalForAll',
+  //     setApprovalForAllParams,
   //     treasuryAccPvKey);
+
+  // const isApprovedForAllParams = new ContractFunctionParameters()
+  //   .addAddress(TOKEN_ID_IN_SOLIDITY_FORMAT)
+  //   .addAddress(TREASURY_ACCOUNT_IN_SOLIDITY_FORMAT)
+  //   .addAddress(ALICE_ACCOUNT_IN_SOLIDITY_FORMAT);
+
+  //   const isApprovedForAllContractResult = await executeContractFunction(
+  //     client,
+  //     contractId,
+  //     4_000_000,
+  //     'isApprovedForAll',
+  //     isApprovedForAllParams,
+  //     treasuryAccPvKey
+  //   )
+  //   console.log(`Is approved for all assets?: ${isApprovedForAllContractResult?.getBool(0)}`);
 
   
   /*
